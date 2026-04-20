@@ -9,5 +9,10 @@ projects/
 voice_profiles/
 sessions.db
 
+# Build artifacts
+build/
+*.egg-info/
+dist/
+
 # OS
 .DS_Store
