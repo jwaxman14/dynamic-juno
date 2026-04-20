@@ -69,8 +69,7 @@ function useAgentStates() {
 
 function App() {
   const [activeProjectId, setActiveProjectId] = useStateA("vertical-void");
-  const [projects, setProjects] = useStateA(window.ARTIFACTS.projects);
-  const activeProject = projects.find((p) => p.id === activeProjectId);
+  const activeProject = window.ARTIFACTS.projects.find((p) => p.id === activeProjectId);
 
   const [activeArtifact, setActiveArtifact] = useStateA(null); // { type, data }
   const openArtifact = (leaf) => setActiveArtifact(leaf.payload);
@@ -94,143 +93,6 @@ function App() {
   useEffectA(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, typingAgent, activeArtifact]);
-
-  const handleNewProject = ({ title, type, genre, description }) => {
-    const id = `proj-${Date.now()}`;
-    const newProject = {
-      id,
-      name: title,
-      status: "ideation",
-      created: new Date().toISOString().slice(0, 10),
-      wordCount: 0,
-      chapters: 0,
-      updated: "just now",
-    };
-    setProjects((prev) => [...prev, newProject]);
-    setActiveProjectId(id);
-    setActiveArtifact(null);
-
-    const parts = [`I'm starting a new ${type} book project: **${title}**.`];
-    if (genre) parts.push(`Genre: ${genre}.`);
-    if (description) parts.push(description);
-    const initMessage = parts.join(" ");
-
-    setTimeout(() => send(initMessage), 100);
-  };
-
-  const handleProjectSwitch = (project) => {
-    setBusy(true);
-
-    const ideas = window.ARTIFACTS.ideas.filter((a) => a.project === project.id);
-    const outlines = window.ARTIFACTS.outlines.filter((a) => a.project === project.id);
-    const drafts = window.ARTIFACTS.drafts.filter((a) => a.project === project.id);
-
-    setMessages((m) => [
-      ...m,
-      { id: `ctx-${Date.now()}`, role: "system", text: `Project: ${project.name}`, time: window.now() },
-    ]);
-
-    let reviewAgentId, coordinatorText, agentReply, reviewSteps, artifactToOpen;
-
-    if (project.status === "drafting" && drafts.length > 0) {
-      reviewAgentId = "editor";
-      const totalWords = drafts.reduce((s, d) => s + d.words, 0);
-      const outline = outlines[0];
-      const unwritten = outline ? outline.chapters - drafts.length : 0;
-      coordinatorText = `Switching to **${project.name}** — ${drafts.length} chapter${drafts.length !== 1 ? "s" : ""} drafted, ${totalWords.toLocaleString()} words. Routing to Editor for a status review.`;
-      const draftLines = drafts
-        .map((d) => `- **${d.title}**: ${d.words.toLocaleString()} w — ${d.status}`)
-        .join("\n");
-      agentReply = `Reviewed **${project.name}** — ${drafts.length} chapters drafted, ${totalWords.toLocaleString()} words.\n\n${draftLines}${unwritten > 0 ? `\n\n${unwritten} chapter${unwritten !== 1 ? "s" : ""} in the outline are not yet written.` : ""}\n\nReady to keep drafting, do an editorial pass, or tackle the structure gaps — what's the priority?`;
-      reviewSteps = [
-        { agent: "editor", state: "working", work: "Reading draft files", ms: 1100 },
-        { agent: "editor", state: "working", work: "Assessing chapter status", ms: 1000 },
-        { agent: "editor", state: "working", work: "Flagging editorial priorities", ms: 800 },
-      ];
-      artifactToOpen = drafts[0] ? { type: "draft", data: drafts[0] } : null;
-    } else {
-      reviewAgentId = "idea";
-      const idea = ideas[0];
-      const outline = outlines[0];
-      coordinatorText = `Switching to **${project.name}** — currently in ${project.status}.${outline ? ` ${outline.chapters}-chapter structure is sketched.` : ""} I'll have Idea Agent pull up what we have.`;
-      const thesisMatch = idea?.body.match(/##\s*Core Thesis\s*\n+([\s\S]*?)(?=\n##|$)/);
-      const rawThesis = thesisMatch ? thesisMatch[1].trim() : null;
-      const thesis = rawThesis
-        ? (rawThesis.match(/^[^.!?]+[.!?]/)?.[0] ?? rawThesis.split("\n")[0])
-        : null;
-      const chapterLines = outline
-        ? outline.body
-            .split("\n")
-            .filter((l) => l.startsWith("###"))
-            .map((l) => `- ${l.replace(/^###\s*/, "")}`)
-            .join("\n")
-        : null;
-      agentReply = [
-        `Pulled up **${project.name}**.`,
-        thesis
-          ? `\n\n**Core thesis:** ${thesis}`
-          : idea
-          ? "\n\nIdea document is loaded."
-          : "\n\nNo idea document yet.",
-        chapterLines
-          ? `\n\n**${outline.chapters}-chapter structure:**\n${chapterLines}`
-          : "\n\nNo outline yet — ready to start structuring.",
-        `\n\nWhat do you want to work on?`,
-      ].join("");
-      reviewSteps = [
-        { agent: "idea", state: "working", work: "Reading idea document", ms: 1200 },
-        { agent: "idea", state: "working", work: "Reviewing chapter structure", ms: 900 },
-        { agent: "idea", state: "working", work: "Assessing voice calibration", ms: 700 },
-      ];
-      artifactToOpen = idea
-        ? { type: "idea", data: idea }
-        : outline
-        ? { type: "outline", data: outline }
-        : null;
-    }
-
-    setTimeout(() => {
-      setMessages((m) => [
-        ...m,
-        {
-          id: `coord-${Date.now()}`,
-          role: "assistant",
-          agentId: "coordinator",
-          time: window.now(),
-          text: coordinatorText,
-          handoff: reviewAgentId,
-        },
-      ]);
-    }, 600);
-
-    runScenario({ target: reviewAgentId, steps: reviewSteps });
-    setTimeout(() => setTypingAgent(reviewAgentId), 1600);
-
-    const total = reviewSteps.reduce((s, step) => s + step.ms, 900);
-    setTimeout(() => {
-      setTypingAgent(null);
-      setMessages((m) => [
-        ...m,
-        {
-          id: `rev-${Date.now()}`,
-          role: "assistant",
-          agentId: reviewAgentId,
-          time: window.now(),
-          text: agentReply,
-        },
-      ]);
-      setBusy(false);
-      if (artifactToOpen) setActiveArtifact(artifactToOpen);
-    }, total + 700);
-  };
-
-  const handleSelectProject = (id) => {
-    const project = projects.find((p) => p.id === id);
-    if (!project || id === activeProjectId) return;
-    setActiveProjectId(id);
-    setActiveArtifact(null);
-    if (!busy) handleProjectSwitch(project);
-  };
 
   const send = (text) => {
     const scenario = window.pickScenario(text);
@@ -288,12 +150,11 @@ function App() {
   return (
     <div className="shell">
       <window.ArtifactBrowser
-        projects={projects}
+        projects={window.ARTIFACTS.projects}
         activeProjectId={activeProjectId}
-        setActiveProjectId={handleSelectProject}
+        setActiveProjectId={setActiveProjectId}
         openArtifact={openArtifact}
         activeArtifactId={activeArtifactId}
-        onNewProject={handleNewProject}
       />
 
       <main className="stage">

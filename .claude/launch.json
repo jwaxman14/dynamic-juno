@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "DynamicJuno",
+      "runtimeExecutable": "tail",
+      "runtimeArgs": ["-f", "/dev/null"],
+      "port": 8000
+    }
+  ]
+}
