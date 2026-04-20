@@ -17,14 +17,6 @@ const now = () => {
 
 const agentById = (id) => window.AGENTS.find((a) => a.id === id);
 
-// Match an incoming message against the scripted scenarios.
-function pickScenario(text) {
-  for (const s of window.SCENARIOS) {
-    if (s.match.test(text)) return s;
-  }
-  return window.DEFAULT_SCENARIO;
-}
-
 // Tiny markdown → HTML (headings, bold, italic, lists, paragraphs).
 // Deliberately small; artifact content is writer-authored, not untrusted.
 function mdToHtml(src) {
@@ -139,6 +131,5 @@ function StatusRail({ states, activeProject }) {
 
 window.StatusRail = StatusRail;
 window.mdToHtml = mdToHtml;
-window.pickScenario = pickScenario;
 window.agentById = agentById;
 window.now = now;

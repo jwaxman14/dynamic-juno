@@ -100,6 +100,7 @@ window.AGENTS = [
 // right-rail (agent → state → work line → duration ms).
 window.SCENARIOS = [
   {
+    mention: /@research/i,
     match: /@research|research|citation|evidence|source/i,
     target: "research",
     route: "Routing to the Research Agent — they'll dig up sources on that.",
@@ -113,7 +114,8 @@ window.SCENARIOS = [
       "I pulled six peer-reviewed sources on flow state in high-risk sports — three from Csíkszentmihályi's lineage, two on climbing specifically, one on base-jumping psychophysiology. I've saved them to `research/flowstatehighrisksports.md` with annotations. Want me to line up quotes against Chapter 2.1?",
   },
   {
-    match: /@outline|outline|structure|chapter/i,
+    mention: /@outline/i,
+    match: /@outline|outline|structure/i,
     target: "outline",
     route: "Handing off to the Outline Agent.",
     steps: [
@@ -125,6 +127,7 @@ window.SCENARIOS = [
       "I've rebalanced Chapter 2 so *The Alchemy of Suffering* leads into *The Moving Meditation* rather than the other way around — the physicality earns the stillness. Also added a small 3.4 on re-entry into ordinary life. Outline is updated.",
   },
   {
+    mention: /@voice/i,
     match: /@voice|voice|style|tone|sample/i,
     target: "voice",
     route: "Passing this to the Voice Agent.",
@@ -138,6 +141,7 @@ window.SCENARIOS = [
       "Profile updated. Sentence variation is wider than I first measured — you alternate grounding declaratives (8–10 words) with long observational sweeps (25+). I've noted the tricolon habit and the second-person pivot. See `voice_profiles/climber.json`.",
   },
   {
+    mention: /@writer/i,
     match: /@writer|write|draft|chapter \d/i,
     target: "writer",
     route: "Writer Agent, over to you.",
@@ -151,6 +155,7 @@ window.SCENARIOS = [
       "First pass of 1.2 is down — 980 words. I leaned on the Climber profile for rhythm, kept the tricolons, and opened with the threshold moment rather than a frame. Saved to `chapters/chapter-01.md`. Ready for the Editor when you are.",
   },
   {
+    mention: /@editor/i,
     match: /@editor|edit|polish|review/i,
     target: "editor",
     route: "Editor's taking a look now.",
@@ -164,6 +169,7 @@ window.SCENARIOS = [
       "Edit report is in `edits/chapter-01-report.md`. Highlights: three sentences in 1.1 are doing the same work — I'd cut one. The peppered-moth transition in 1.3 is doing a lot; I've suggested a two-sentence bridge. Otherwise the voice is holding.",
   },
   {
+    mention: /@debat/i,
     match: /@debat|debate|challenge|argue|counter/i,
     target: "debater",
     route: "Routing to the Debater — bracing for opposition.",
@@ -176,6 +182,7 @@ window.SCENARIOS = [
       "Here's the hardest version of the counter: solo climbing isn't meditation, it's dissociation under duress — the 'stillness' you describe is a trauma response, not a practice. If that's true, your book is romanticizing a symptom. How do you want to answer that?",
   },
   {
+    mention: /@idea/i,
     match: /@idea|idea|brainstorm|theme|thesis|angle/i,
     target: "idea",
     route: "Handing off to the Idea Agent.",

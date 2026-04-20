@@ -14,8 +14,14 @@ window.agentById = function (id) {
   return window.AGENTS.find((a) => a.id === id) || window.AGENTS[0];
 };
 
-// Pick a scripted scenario based on message text
+// Pick a scripted scenario based on message text.
+// Two-pass: explicit @mentions always win before keyword inference runs.
 window.pickScenario = function (text) {
+  // Pass 1: explicit @mention takes absolute priority
+  for (const s of window.SCENARIOS) {
+    if (s.mention && s.mention.test(text)) return s;
+  }
+  // Pass 2: keyword intent inference
   for (const s of window.SCENARIOS) {
     if (s.match && s.match.test(text)) return s;
   }
