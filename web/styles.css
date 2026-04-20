@@ -560,9 +560,12 @@ textarea { font-family: inherit; color: inherit; }
   border-bottom-right-radius: 3px;
   display: inline-block;
   font-size: 15px;
+  max-width: 75%;
+  word-wrap: break-word;
 }
 .msg--user { grid-template-columns: 1fr 40px; }
-.msg--user .msg__body { display: flex; flex-direction: column; align-items: flex-end; }
+.msg--user .msg__gutter { grid-column: 2; }
+.msg--user .msg__body { grid-column: 1; display: flex; flex-direction: column; align-items: flex-end; }
 .msg--user .msg__header { flex-direction: row-reverse; }
 .msg--user .msg__time { margin-left: 0; margin-right: auto; }
 
