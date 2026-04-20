@@ -105,7 +105,7 @@ window.SCENARIOS = [
     route: "Routing to the Research Agent — they'll dig up sources on that.",
     steps: [
       { agent: "research", state: "listening", work: "Reading your request", ms: 900 },
-      { agent: "research", state: "working", work: "Searching Semantic Scholar for flow-state studies", ms: 2200 },
+      { agent: "research", state: "working", work: "Searching Semantic Scholar", ms: 2200 },
       { agent: "research", state: "working", work: "Cross-referencing with arXiv", ms: 1800 },
       { agent: "research", state: "working", work: "Compiling 6 sources into research/", ms: 1600 },
     ],
@@ -132,7 +132,7 @@ window.SCENARIOS = [
       { agent: "voice", state: "listening", work: "Receiving samples", ms: 800 },
       { agent: "voice", state: "working", work: "Analyzing 4 samples for rhythm", ms: 2000 },
       { agent: "voice", state: "working", work: "Computing sentence-length variance", ms: 1600 },
-      { agent: "voice", state: "working", work: "Refining the Climber profile", ms: 1400 },
+      { agent: "voice", state: "working", work: "Refining the active voice profile", ms: 1400 },
     ],
     reply:
       "Profile updated. Sentence variation is wider than I first measured — you alternate grounding declaratives (8–10 words) with long observational sweeps (25+). I've noted the tricolon habit and the second-person pivot. See `voice_profiles/climber.json`.",
@@ -143,8 +143,8 @@ window.SCENARIOS = [
     route: "Writer Agent, over to you.",
     steps: [
       { agent: "writer", state: "listening", work: "Pulling outline + voice profile", ms: 1000 },
-      { agent: "voice", state: "listening", work: "Consulting: sharing Climber profile", ms: 1200 },
-      { agent: "writer", state: "working", work: "Drafting 1.2 — The Threshold of Risk", ms: 2600 },
+      { agent: "voice", state: "listening", work: "Consulting voice profile", ms: 1200 },
+      { agent: "writer", state: "working", work: "Drafting the requested section", ms: 2600 },
       { agent: "writer", state: "working", work: "Revising opening 400 words", ms: 2000 },
     ],
     reply:

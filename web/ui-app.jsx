@@ -260,23 +260,33 @@ function App() {
     const total = scenario.steps.reduce((sum, s) => sum + s.ms, 900);
     setTimeout(() => {
       setTypingAgent(null);
+
+      // Build a project-aware reply using the active project's real artifacts.
+      const projectArtifacts = {
+        ideas:         window.ARTIFACTS.ideas.filter((a) => a.project === activeProjectId),
+        outlines:      window.ARTIFACTS.outlines.filter((a) => a.project === activeProjectId),
+        drafts:        window.ARTIFACTS.drafts.filter((a) => a.project === activeProjectId),
+        voiceProfiles: window.ARTIFACTS.voiceProfiles,
+      };
+      const replyText = window.buildProjectReply(scenario.target, activeProject, projectArtifacts);
+
       setMessages((m) => [...m, {
         id: `a-${Date.now()}`,
         role: "assistant",
         agentId: scenario.target,
         time: window.now(),
-        text: scenario.reply,
+        text: replyText,
       }]);
       setBusy(false);
 
       // If the reply created / updated an artifact, open it in the reader.
       const maybe = {
         research: null, // research reader not yet built; left rail stays the main surface
-        outline: window.ARTIFACTS.outlines.find((o) => o.project === activeProjectId),
-        voice: window.ARTIFACTS.voiceProfiles[0],
-        writer: window.ARTIFACTS.drafts.find((d) => d.project === activeProjectId),
-        editor: window.ARTIFACTS.drafts.find((d) => d.project === activeProjectId),
-        idea: window.ARTIFACTS.ideas.find((i) => i.project === activeProjectId),
+        outline: projectArtifacts.outlines[0] ?? null,
+        voice: projectArtifacts.voiceProfiles[0] ?? null,
+        writer: projectArtifacts.drafts[0] ?? null,
+        editor: projectArtifacts.drafts[0] ?? null,
+        idea: projectArtifacts.ideas[0] ?? null,
       }[scenario.target];
       if (maybe) {
         const typeMap = { outline: "outline", voice: "voice", writer: "draft", editor: "draft", idea: "idea" };

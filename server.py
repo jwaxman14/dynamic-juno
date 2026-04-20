@@ -41,6 +41,8 @@ app_state = {}
 class ChatRequest(BaseModel):
     message: str
     session_id: str
+    project_id: str = ""
+    book_name: str = ""
 
 
 @asynccontextmanager
@@ -117,9 +119,17 @@ async def chat_endpoint(request: ChatRequest):
     """Handle chat messages and stream responses using SSE."""
     runner = app_state["runner"]
     user_id = "local_user"  # Single-user local setup
-    
-    await get_or_create_session(user_id, request.session_id)
-    
+
+    session = await get_or_create_session(user_id, request.session_id)
+
+    # Propagate project context into session state so all agents can read it.
+    if request.book_name and session:
+        try:
+            session.state["book_name"] = request.book_name
+            session.state["project_id"] = request.project_id
+        except Exception as state_err:
+            logger.warning(f"Could not set project state: {state_err}")
+
     content = types.Content(role="user", parts=[types.Part.from_text(text=request.message)])
     
     async def event_stream():
