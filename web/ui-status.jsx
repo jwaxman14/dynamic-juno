@@ -118,7 +118,7 @@ function StatusRail({ states, activeProject }) {
       <div className="rail__footer">
         <div className="rail__footer-row">
           <span className="kbd">session</span>
-          <span className="rail__footer-value">{activeProject.name}</span>
+          <span className="rail__footer-value">{activeProject?.name ?? "—"}</span>
         </div>
         <div className="rail__footer-row">
           <span className="kbd">model</span>

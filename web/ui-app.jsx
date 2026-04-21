@@ -23,7 +23,6 @@ function useAgentStates() {
   const initial = {};
   for (const a of window.AGENTS) initial[a.id] = { status: "idle", work: null };
   const [states, setStates] = useStateA(initial);
-  const timers = useRefA([]);
 
   const setAgentStatus = (agentId, status, work = null) =>
     setStates((s) => ({ ...s, [agentId]: { status, work } }));
@@ -36,60 +35,7 @@ function useAgentStates() {
     });
   };
 
-  const clear = () => {
-    timers.current.forEach((t) => clearTimeout(t));
-    timers.current = [];
-  };
-
-  const runScenario = (scenario, onComplete) => {
-    clear();
-    // Coordinator is always "working" at the top of a route.
-    setStates((s) => ({ ...s, coordinator: { status: "working", work: "Classifying intent" } }));
-
-    let elapsed = 0;
-    // Coordinator routes briefly, then hands off.
-    timers.current.push(setTimeout(() => {
-      setStates((s) => ({ ...s, coordinator: { status: "communicating", work: `→ ${window.agentById(scenario.target).name}` } }));
-    }, 900));
-    elapsed += 900;
-
-    for (const step of scenario.steps) {
-      const at = elapsed;
-      timers.current.push(setTimeout(() => {
-        setStates((s) => ({ ...s, [step.agent]: { status: step.state, work: step.work } }));
-      }, at));
-      elapsed += step.ms;
-    }
-
-    // After the last step: return everyone to idle except the target agent,
-    // which stays "communicating" (delivering reply), then goes idle.
-    const finalAt = elapsed;
-    timers.current.push(setTimeout(() => {
-      setStates((s) => {
-        const next = { ...s };
-        for (const a of window.AGENTS) {
-          next[a.id] = a.id === scenario.target
-            ? { status: "communicating", work: "Delivering response" }
-            : { status: "idle", work: null };
-        }
-        return next;
-      });
-    }, finalAt));
-
-    timers.current.push(setTimeout(() => {
-      setStates((s) => {
-        const next = { ...s };
-        for (const a of window.AGENTS) next[a.id] = { status: "idle", work: null };
-        return next;
-      });
-      onComplete && onComplete();
-    }, finalAt + 900));
-
-    return finalAt + 900;
-  };
-
-  useEffectA(() => () => clear(), []);
-  return { states, runScenario, setAgentStatus, setAllIdle };
+  return { states, setAgentStatus, setAllIdle };
 }
 
 function App() {
@@ -178,7 +124,7 @@ function App() {
     }
   };
 
-  const { states, runScenario, setAgentStatus, setAllIdle } = useAgentStates();
+  const { states, setAgentStatus, setAllIdle } = useAgentStates();
   const [busy, setBusy] = useStateA(false);
   const [typingAgent, setTypingAgent] = useStateA(null);
   const [sessionState, setSessionState] = useStateA({});
@@ -223,109 +169,13 @@ function App() {
   };
 
   const handleProjectSwitch = (project) => {
-    setBusy(true);
-
-    const ideas = (artifacts.ideas || []).filter((a) => a.project === project.id);
-    const outlines = (artifacts.outlines || []).filter((a) => a.project === project.id);
-    const drafts = (artifacts.drafts || []).filter((a) => a.project === project.id);
-
     setMessages((m) => [
       ...m,
       { id: `ctx-${Date.now()}`, role: "system", text: `Project: ${project.name}`, time: window.now() },
     ]);
-
-    let reviewAgentId, coordinatorText, agentReply, reviewSteps, artifactToOpen;
-
-    if (project.status === "drafting" && drafts.length > 0) {
-      reviewAgentId = "editor";
-      const totalWords = drafts.reduce((s, d) => s + d.words, 0);
-      const outline = outlines[0];
-      const unwritten = outline ? outline.chapters - drafts.length : 0;
-      coordinatorText = `Switching to **${project.name}** — ${drafts.length} chapter${drafts.length !== 1 ? "s" : ""} drafted, ${totalWords.toLocaleString()} words. Routing to Editor for a status review.`;
-      const draftLines = drafts
-        .map((d) => `- **${d.title}**: ${d.words.toLocaleString()} w — ${d.status}`)
-        .join("\n");
-      agentReply = `Reviewed **${project.name}** — ${drafts.length} chapters drafted, ${totalWords.toLocaleString()} words.\n\n${draftLines}${unwritten > 0 ? `\n\n${unwritten} chapter${unwritten !== 1 ? "s" : ""} in the outline are not yet written.` : ""}\n\nReady to keep drafting, do an editorial pass, or tackle the structure gaps — what's the priority?`;
-      reviewSteps = [
-        { agent: "editor", state: "working", work: "Reading draft files", ms: 1100 },
-        { agent: "editor", state: "working", work: "Assessing chapter status", ms: 1000 },
-        { agent: "editor", state: "working", work: "Flagging editorial priorities", ms: 800 },
-      ];
-      artifactToOpen = drafts[0] ? { type: "draft", data: drafts[0] } : null;
-    } else {
-      reviewAgentId = "idea";
-      const idea = ideas[0];
-      const outline = outlines[0];
-      coordinatorText = `Switching to **${project.name}** — currently in ${project.status}.${outline ? ` ${outline.chapters}-chapter structure is sketched.` : ""} I'll have Idea Agent pull up what we have.`;
-      const thesisMatch = idea?.body.match(/##\s*Core Thesis\s*\n+([\s\S]*?)(?=\n##|$)/);
-      const rawThesis = thesisMatch ? thesisMatch[1].trim() : null;
-      const thesis = rawThesis
-        ? (rawThesis.match(/^[^.!?]+[.!?]/)?.[0] ?? rawThesis.split("\n")[0])
-        : null;
-      const chapterLines = outline
-        ? outline.body
-            .split("\n")
-            .filter((l) => l.startsWith("###"))
-            .map((l) => `- ${l.replace(/^###\s*/, "")}`)
-            .join("\n")
-        : null;
-      agentReply = [
-        `Pulled up **${project.name}**.`,
-        thesis
-          ? `\n\n**Core thesis:** ${thesis}`
-          : idea
-          ? "\n\nIdea document is loaded."
-          : "\n\nNo idea document yet.",
-        chapterLines
-          ? `\n\n**${outline.chapters}-chapter structure:**\n${chapterLines}`
-          : "\n\nNo outline yet — ready to start structuring.",
-        `\n\nWhat do you want to work on?`,
-      ].join("");
-      reviewSteps = [
-        { agent: "idea", state: "working", work: "Reading idea document", ms: 1200 },
-        { agent: "idea", state: "working", work: "Reviewing chapter structure", ms: 900 },
-        { agent: "idea", state: "working", work: "Assessing voice calibration", ms: 700 },
-      ];
-      artifactToOpen = idea
-        ? { type: "idea", data: idea }
-        : outline
-        ? { type: "outline", data: outline }
-        : null;
-    }
-
     setTimeout(() => {
-      setMessages((m) => [
-        ...m,
-        {
-          id: `coord-${Date.now()}`,
-          role: "assistant",
-          agentId: "coordinator",
-          time: window.now(),
-          text: coordinatorText,
-          handoff: reviewAgentId,
-        },
-      ]);
-    }, 600);
-
-    runScenario({ target: reviewAgentId, steps: reviewSteps });
-    setTimeout(() => setTypingAgent(reviewAgentId), 1600);
-
-    const total = reviewSteps.reduce((s, step) => s + step.ms, 900);
-    setTimeout(() => {
-      setTypingAgent(null);
-      setMessages((m) => [
-        ...m,
-        {
-          id: `rev-${Date.now()}`,
-          role: "assistant",
-          agentId: reviewAgentId,
-          time: window.now(),
-          text: agentReply,
-        },
-      ]);
-      setBusy(false);
-      if (artifactToOpen) setActiveArtifact(artifactToOpen);
-    }, total + 700);
+      send(`I've switched to the project "${project.name}". Please review the current state of this project and tell me where we left off and what the best next step is.`);
+    }, 100);
   };
 
   const handleSelectProject = (id) => {
@@ -428,6 +278,26 @@ function App() {
       setBusy(false);
     }
   };
+
+  if (!activeProject) return (
+    <div className="shell">
+      <window.ArtifactBrowser
+        projects={projects}
+        artifacts={artifacts}
+        activeProjectId={activeProjectId}
+        setActiveProjectId={handleSelectProject}
+        openArtifact={openArtifact}
+        activeArtifactId={activeArtifactId}
+        onNewProject={handleNewProject}
+        onDeleteProject={handleDeleteProject}
+        onSync={handleSync}
+        syncing={syncing}
+        syncResult={syncResult}
+      />
+      <main className="stage"><div className="thread"><div className="thread__inner" /></div></main>
+      <window.StatusRail states={states} activeProject={null} sessionState={sessionState} />
+    </div>
+  );
 
   return (
     <div className="shell">

@@ -265,23 +265,23 @@ function ArtifactGroup({ title, count, children, defaultOpen = true }) {
 function ArtifactBrowser({ projects, artifacts, activeProjectId, setActiveProjectId, openArtifact, activeArtifactId, onNewProject, onDeleteProject, onSync, syncing, syncResult }) {
   const [showNewModal, setShowNewModal] = useStateL(false);
   const [artifactModal, setArtifactModal] = useStateL(null); // { kind, title, items }
-  const A = artifacts || window.ARTIFACTS;
+  const A = artifacts || {};
 
   // Build filtered leaves per group, limited to the active project for
   // project-scoped artifacts; voice profiles are global.
-  const ideaLeaves = A.ideas
+  const ideaLeaves = (A.ideas || [])
     .filter((i) => i.project === activeProjectId)
     .map((i) => ({ kind: "idea", id: i.id, label: i.title, meta: i.updated, payload: { type: "idea", data: i } }));
-  const outlineLeaves = A.outlines
+  const outlineLeaves = (A.outlines || [])
     .filter((o) => o.project === activeProjectId)
     .map((o) => ({ kind: "outline", id: o.id, label: o.title, meta: `${o.chapters} ch`, payload: { type: "outline", data: o } }));
-  const draftLeaves = A.drafts
+  const draftLeaves = (A.drafts || [])
     .filter((d) => d.project === activeProjectId)
     .map((d) => ({ kind: "draft", id: d.id, label: d.title, meta: `${d.words.toLocaleString()} w`, payload: { type: "draft", data: d } }));
-  const voiceLeaves = A.voiceProfiles.map((v) => ({
+  const voiceLeaves = (A.voiceProfiles || []).map((v) => ({
     kind: "voice", id: v.id, label: v.name, meta: `${v.samples} sample${v.samples === 1 ? "" : "s"}`, payload: { type: "voice", data: v },
   }));
-  const worldLeaves = A.world
+  const worldLeaves = (A.world || [])
     .filter((w) => w.project === activeProjectId)
     .map((w) => ({ kind: "world", id: w.id, label: w.title, meta: w.type, payload: { type: "world", data: w } }));
   const researchItems = (A.research || []).filter((r) => r.project === activeProjectId);
