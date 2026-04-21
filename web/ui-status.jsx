@@ -62,6 +62,7 @@ function AgentCard({ agent, state }) {
         </div>
         <div className="agent-card__id">
           <div className="agent-card__name">
+            {agent.icon && <span className="agent-card__icon" style={{marginRight: '6px'}}>{agent.icon}</span>}
             {agent.name}
             {agent.isHub ? <span className="agent-card__hub">hub</span> : null}
           </div>

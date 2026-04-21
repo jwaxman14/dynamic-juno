@@ -28,7 +28,7 @@ function Message({ msg }) {
           <div className="avatar avatar--user">YOU</div>
         ) : (
           <div className={`avatar avatar--agent avatar--${agent.id}`}>
-            {agent.name.split(" ")[0].slice(0, 2).toUpperCase()}
+            {agent.icon ? agent.icon : agent.name.split(" ")[0].slice(0, 2).toUpperCase()}
           </div>
         )}
       </div>
@@ -56,7 +56,7 @@ function TypingBubble({ agentId }) {
     <div className={`msg msg--agent msg--typing msg--${agent.id}`}>
       <div className="msg__gutter">
         <div className={`avatar avatar--agent avatar--${agent.id}`}>
-          {agent.name.split(" ")[0].slice(0, 2).toUpperCase()}
+          {agent.icon ? agent.icon : agent.name.split(" ")[0].slice(0, 2).toUpperCase()}
         </div>
       </div>
       <div className="msg__body">
