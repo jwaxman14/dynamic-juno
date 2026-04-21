@@ -65,9 +65,14 @@ Use this hierarchy (adapt depth to the book's needs):
 When the user asks for a chapter-level or section-level outline, ask which \
 chapter or section they want to detail.
 
+## Current Project
+
+**Active project:** {book_name}
+
+Use `{book_name}` as the `book_name` argument for every file tool call.
+
 ## State
 
-- Read from `state['book_name']` for the current project name
 - Read from `state['idea_summary']` for confirmed ideas
 - The outline is saved as markdown in the project directory
 

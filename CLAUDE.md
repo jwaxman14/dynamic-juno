@@ -108,8 +108,9 @@ Projects are stored in `projects/` as subdirectories. Each project is a folder c
 - Artifact browser (ideas, outlines, drafts, research, world building) filtered by active project
 - Message thread with agent responses
 - Agent status tracking (idle/listening/working) synced to the right rail
+- Session state management — listens to SSE `state` events and updates React state in real time
 
-Currently the UI renders mock scenarios from `agents.js` and `artifacts.js`. Live agent chat (`POST /api/chat`) is wired but not yet active — work remains to integrate the composer with the backend ADK runner.
+Live agent chat is fully wired: `/api/chat` endpoint sends SSE events; frontend parses message, status, and state events and renders them live.
 
 **Script loading order matters.** The JSX files use `window.*` globals from earlier scripts. The load order in `index.html` is intentional:
 1. `artifacts.js` → `agents.js` (define globals)
@@ -123,6 +124,16 @@ Babel Standalone processes `type="text/babel"` scripts sequentially, so this ord
 
 **Cache-busting for JSX changes.** The HTML file references JSX scripts with version params (`?v=N`). When you edit `.jsx` files and they don't appear in the browser, increment the version number in `index.html` to bust the browser cache.
 
+**Agent context injection.** All agent instruction files use ADK's template substitution syntax `{variable_name}` to inject dynamic values at runtime. For example, each agent's instructions include:
+```
+## Current Project
+
+**Active project:** {book_name}
+
+Use `{book_name}` as the `book_name` argument for every file tool call.
+```
+ADK substitutes the actual value from session state when the agent runs, ensuring agents always have the current project context without needing to ask the user. The server injects values by passing `instruction=INSTRUCTION_CONSTANT` to `LlmAgent` — ADK handles substitution internally.
+
 ## Current Status
 
 **Fully working:**
@@ -131,11 +142,12 @@ Babel Standalone processes `type="text/babel"` scripts sequentially, so this ord
 - Artifact scanning and display (ideas, outlines, chapters, research reports)
 - UI state management and project switching
 - Agent team definition and routing logic
+- Live chat via `/api/chat` endpoint with SSE streaming
+- Session state persistence to SQLite database via ADK Event/EventActions
+- Agent project context via ADK template substitution (`{book_name}`)
 
 **Partially wired/WIP:**
-- Live chat via `/api/chat` endpoint (backend ready, frontend integration pending)
 - Voice profile uploads (endpoint exists, integration untested)
-- Agent responses streaming to the UI
 
 ## Agent Routing
 

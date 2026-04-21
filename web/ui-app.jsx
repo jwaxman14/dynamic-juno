@@ -93,7 +93,7 @@ function useAgentStates() {
 }
 
 function App() {
-  const [activeProjectId, setActiveProjectIdRaw] = useStateA("vertical-void");
+  const [activeProjectId, setActiveProjectIdRaw] = useStateA(window.ARTIFACTS.projects[0]?.id ?? null);
   const [projects, setProjects] = useStateA(window.ARTIFACTS.projects);
   const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
 
@@ -181,6 +181,7 @@ function App() {
   const { states, runScenario, setAgentStatus, setAllIdle } = useAgentStates();
   const [busy, setBusy] = useStateA(false);
   const [typingAgent, setTypingAgent] = useStateA(null);
+  const [sessionState, setSessionState] = useStateA({});
   const sessionIdRef = useRefA(`session-${Date.now()}`);
 
   const [messages, setMessages] = useStateA(() => ([
@@ -189,7 +190,7 @@ function App() {
       role: "assistant",
       agentId: "coordinator",
       time: window.now(),
-      text: `Welcome back. You're working on **The Vertical Void** — we left off in ideation, with the 3-chapter structure drafted.\n\nI can route to any specialist: **@idea**, **@research**, **@outline**, **@voice**, **@writer**, **@editor**, or **@debater**. Or just tell me what you want to do and I'll hand off.`,
+      text: `Welcome back. I can route to any specialist: **@idea**, **@research**, **@outline**, **@voice**, **@writer**, **@editor**, or **@debater**. Or just tell me what you want to do and I'll hand off.`,
     },
   ]));
 
@@ -378,6 +379,8 @@ function App() {
               setAgentStatus(agentId, "working", "Working…");
               setTypingAgent(agentId);
             }
+          } else if (evt.type === "state") {
+            setSessionState(evt);
           } else if (evt.type === "project_update") {
             setProjects((prev) => prev.map((p) =>
               p.id === evt.id ? { ...p, wordCount: evt.wordCount, chapters: evt.chapters, updated: evt.updated } : p
@@ -473,7 +476,7 @@ function App() {
         <window.Composer onSend={send} disabled={busy} />
       </main>
 
-      <window.StatusRail states={states} activeProject={activeProject} />
+      <window.StatusRail states={states} activeProject={activeProject} sessionState={sessionState} />
     </div>
   );
 }

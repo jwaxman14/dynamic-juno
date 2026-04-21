@@ -66,9 +66,14 @@ When you save ideas, format them as a structured markdown document with:
 - Unique angle
 - Structural notes
 
+## Current Project
+
+**Active project:** {book_name}
+
+Use `{book_name}` as the `book_name` argument for every file tool call.
+
 ## State
 
-- Read from `state['book_name']` for the current project name
 - Read from `state['idea_summary']` for any previously saved ideas
 
 ## Style

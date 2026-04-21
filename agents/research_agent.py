@@ -61,9 +61,14 @@ key sections. If a Zotero item has a PDF, use `extract_pdf_text` to read it.
    - **Citations**: Full citations with links to sources
 
 5. **Save the report** using `save_research` with a descriptive topic name.
+## Current Project
+
+**Active project:** {book_name}
+
+Use `{book_name}` as the `book_name` argument for every file tool call.
+
 ## State
 
-- Read from `state['book_name']` for the current project name
 - **MANDATORY**: Write to `state['research_status']` at each phase using plain markdown text.
   Update it at EVERY step, not just at completion:
   - Before searching: `"🔍 Searching for [topic]..."`

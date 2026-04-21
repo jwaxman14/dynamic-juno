@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import google.adk as adk
+from google.adk.events import Event, EventActions
 from google.adk.sessions import DatabaseSessionService
 from google.genai import types
 
@@ -270,13 +271,20 @@ async def chat_endpoint(request: ChatRequest):
 
     session = await get_or_create_session(user_id, request.session_id)
 
-    # Propagate project context into session state so all agents can read it.
+    # Persist project context into session state so all agents can read it across turns.
     if request.book_name and session:
         try:
-            session.state["book_name"] = request.book_name
-            session.state["project_id"] = request.project_id
+            state_event = Event(
+                invocation_id="project-ctx",
+                author="system",
+                actions=EventActions(state_delta={
+                    "book_name": request.book_name,
+                    "project_id": request.project_id,
+                }),
+            )
+            await app_state["session_service"].append_event(session, state_event)
         except Exception as state_err:
-            logger.warning(f"Could not set project state: {state_err}")
+            logger.warning(f"Could not persist project state: {state_err}")
 
     content = types.Content(role="user", parts=[types.Part.from_text(text=request.message)])
     
@@ -302,7 +310,7 @@ async def chat_endpoint(request: ChatRequest):
                     if session:
                         state_payload = {
                             "type": "state",
-                            "book_name": session.state.get("book_name", ""),
+                            "book_name": session.state.get("book_name") or request.book_name,
                             "research_status": session.state.get("research_status", ""),
                             "editor_status": session.state.get("editor_status", ""),
                             "active_voice_profile": session.state.get("active_voice_profile", ""),

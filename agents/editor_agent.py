@@ -89,9 +89,14 @@ Provide 3-5 high-level suggestions for improvement:
 - Transitions that could be strengthened
 - Opening/closing effectiveness
 
+## Current Project
+
+**Active project:** {book_name}
+
+Use `{book_name}` as the `book_name` argument for every file tool call.
+
 ## State
 
-- Read from `state['book_name']` for the current project name
 - Read from `state['active_voice_profile']` for voice comparison
 - **MANDATORY**: Write to `state['editor_status']` at each phase using plain markdown text.
   Update it at EVERY step:
