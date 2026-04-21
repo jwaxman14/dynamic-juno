@@ -29,11 +29,20 @@ web/               Frontend (no build step)
   agents.js        Window globals: AGENTS registry, SCENARIOS, DEFAULT_SCENARIO
   artifacts.js     Window globals: ARTIFACTS (projects, ideas, outlines, drafts, voice)
   ui-status.jsx    Right rail — live agent status cards; exports window utilities
-  ui-artifacts.jsx Left rail — artifact browser grouped by type
+  ui-artifacts.jsx Left rail — artifact browser, project switcher, sync button
   ui-chat.jsx      Center — Message, Composer, ReaderPanel, TypingBubble
   ui-app.jsx       App shell — composes all three rails, runs agent state machine
+projects/          User book projects (auto-discovered from Finder)
+  <project-name>/
+    metadata.json  Project metadata (id, name, status, type, genre, word/chapter counts)
+    ideas.md       Core thesis and thematic framing
+    outline.md     Chapter structure and scaffolding
+    chapters/      Draft chapters (chapter-01.md, chapter-02.md, etc.)
+    research/      Research reports and evidence summaries
+    edits/         Edit passes and revisions
 voice_profiles/    Uploaded author writing samples (used by voice_agent)
 sessions.db        SQLite session store (ADK DatabaseSessionService)
+.projects-index.json  Cached project metadata (generated/updated by /api/sync)
 ```
 
 ## Running the Server
@@ -42,22 +51,65 @@ sessions.db        SQLite session store (ADK DatabaseSessionService)
 # One-time setup
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
-cp .env.example .env   # add GOOGLE_API_KEY
 
-# Start
+# Create .env and add your Google API key
+cat > .env << EOF
+GOOGLE_API_KEY=your-api-key-here
+EOF
+
+# Start the server
 source .venv/bin/activate && python server.py
 # → http://127.0.0.1:8000
 ```
 
 The server hot-reads `web/index.html` on every request, so HTML changes are live instantly. CSS and JS changes are live on browser reload (no build step needed).
 
+**Python & dependencies:**
+- Python 3.9+ (tested on 3.13)
+- See `pyproject.toml` for full dependency list
+- Key packages: google-adk, fastapi, uvicorn, python-docx, PyMuPDF, textstat
+- Install: `pip install -e .` (from project root)
+
+## Project Discovery & Sync
+
+Projects are stored in `projects/` as subdirectories. Each project is a folder containing:
+- `metadata.json` — project metadata (auto-created if missing)
+- `ideas.md` — thesis and framing
+- `outline.md` — chapter structure
+- `chapters/` — chapter drafts (chapter-01.md, etc.)
+- `research/` — research reports
+- `edits/` — edit passes
+
+**To add projects manually:**
+1. Create a new folder in `projects/`
+2. Add markdown files (ideas.md, outline.md, chapters/chapter-01.md, etc.)
+3. Click "↻ Sync Files" in the left rail footer
+4. The app will auto-discover the folder, generate `metadata.json`, scan for artifacts, and update stats
+
+## API Endpoints
+
+**Project management:**
+- `GET /api/projects` — list all projects with metadata
+- `POST /api/projects` — create a new project (body: `{ title, type, genre, description }`)
+- `DELETE /api/projects/{project_id}` — delete a project
+- `POST /api/sync` — scan `projects/` folder, auto-register new folders, recompute stats, return `{ projects, artifacts, synced }`
+
+**Chat & agents:**
+- `POST /api/chat` — send a message to the coordinator agent (body: `{ message, session_id, project_id, book_name }`)
+- `GET /api/state/{session_id}` — fetch session state and message history
+
+**Voice profiles:**
+- `POST /api/voice/upload` — upload a writing sample for voice analysis (multipart form: `file`, `profile_name`)
+
 ## Key Implementation Details
 
-**Dual-layer UI.** The web UI has two independent layers:
-1. **Scripted demo** (`agents.js` scenarios + `ui-app.jsx` state machine) — renders immediately with no backend, driven by `window.SCENARIOS` pattern matching.
-2. **Live agents** (backend `/chat` endpoint + ADK) — real Gemini calls that stream through the agent team.
+**React UI state machine.** The frontend in `ui-app.jsx` manages:
+- Project list and active project switching
+- Artifact browser (ideas, outlines, drafts, research, world building) filtered by active project
+- Message thread with agent responses
+- Agent status tracking (idle/listening/working) synced to the right rail
 
-The current UI only uses the scripted demo layer. Wiring the composer to `/chat` is the next step.
+Currently the UI renders mock scenarios from `agents.js` and `artifacts.js`. Live agent chat (`POST /api/chat`) is wired but not yet active — work remains to integrate the composer with the backend ADK runner.
 
 **Script loading order matters.** The JSX files use `window.*` globals from earlier scripts. The load order in `index.html` is intentional:
 1. `artifacts.js` → `agents.js` (define globals)
@@ -69,10 +121,21 @@ Babel Standalone processes `type="text/babel"` scripts sequentially, so this ord
 
 **Session storage.** ADK `DatabaseSessionService` writes to `sessions.db`. Delete this file to reset all conversation history.
 
-**The running server may live elsewhere.** When Gemini Antigravity starts the server, it runs from `~/.gemini/antigravity/playground/dynamic-juno/`, not this directory. After editing files here, sync with:
-```bash
-cp web/* ~/.gemini/antigravity/playground/dynamic-juno/web/
-```
+**Cache-busting for JSX changes.** The HTML file references JSX scripts with version params (`?v=N`). When you edit `.jsx` files and they don't appear in the browser, increment the version number in `index.html` to bust the browser cache.
+
+## Current Status
+
+**Fully working:**
+- Project CRUD (create, read, delete)
+- Project discovery and sync from the file system
+- Artifact scanning and display (ideas, outlines, chapters, research reports)
+- UI state management and project switching
+- Agent team definition and routing logic
+
+**Partially wired/WIP:**
+- Live chat via `/api/chat` endpoint (backend ready, frontend integration pending)
+- Voice profile uploads (endpoint exists, integration untested)
+- Agent responses streaming to the UI
 
 ## Agent Routing
 
