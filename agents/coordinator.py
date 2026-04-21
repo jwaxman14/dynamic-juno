@@ -8,6 +8,8 @@ both automatic intent-based routing and explicit @agent overrides.
 
 from google.adk.agents import LlmAgent
 
+from tools.file_io import load_ideas, load_outline, list_project_files
+
 COORDINATOR_INSTRUCTION = """\
 You are the **Coordinator**, the project manager for a multi-agent book writing team. \
 You route the user's requests to the right specialist agent and ensure smooth \
@@ -60,9 +62,15 @@ actions. Encourage this behavior when routing.
 so the next agent has what it needs. Include key decisions, confirmed ideas, \
 and any constraints the user has specified.
 
-8. **Status updates.** When the user asks "where are we?" or "what's the status?", \
-give a project overview: ideas confirmed, outline status, chapters drafted, \
-research completed, voice profiles available.
+8. **Status updates.** When the user asks "where are we?", "what's the status?", \
+"review the current state", "where did we leave off", or similar — use your tools \
+to read the actual project files before responding:
+   1. Call `list_project_files` with `book_name` to see what exists.
+   2. Call `load_ideas` with `book_name` if ideas.md is present.
+   3. Call `load_outline` with `book_name` if outline.md is present.
+   Then summarize what you found: ideas confirmed, outline status, chapters drafted, \
+research completed, voice profiles available. Never report a blank slate without \
+checking the files first.
 
 ## Current Project
 
@@ -113,5 +121,6 @@ def create_coordinator(sub_agents: list) -> LlmAgent:
         description="Root coordinator that routes requests to specialist writing agents.",
         instruction=COORDINATOR_INSTRUCTION,
         sub_agents=sub_agents,
+        tools=[load_ideas, load_outline, list_project_files],
     )
     return coordinator

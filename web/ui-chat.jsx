@@ -143,13 +143,45 @@ function Composer({ onSend, disabled }) {
   );
 }
 
-function ReaderPanel({ item, onClose }) {
+function ReaderPanel({ item, onClose, onSave }) {
   if (!item) return null;
   const { type, data } = item;
-  // Which right-rail agent "owns" this artifact kind — shown as a badge.
   const owner = { idea: "idea", outline: "outline", draft: "writer", voice: "voice", world: "idea" }[type];
   const ownerAgent = window.agentById(owner);
   const kindLabel = { idea: "Idea document", outline: "Outline", draft: "Draft", voice: "Voice profile", world: "World building" }[type];
+  const canEdit = type === "idea" || type === "outline" || type === "draft";
+
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editValue, setEditValue] = React.useState(data.body || "");
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsEditing(false);
+    setEditValue(data.body || "");
+  }, [data.id]);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/artifacts/${data.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editValue }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        onSave(updated);
+        setIsEditing(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleCancel() {
+    setEditValue(data.body || "");
+    setIsEditing(false);
+  }
 
   return (
     <div className="reader">
@@ -165,15 +197,35 @@ function ReaderPanel({ item, onClose }) {
             {data.status ? <><span className="reader__dot">·</span><span className="tag tag--quiet">{data.status}</span></> : null}
           </div>
         </div>
-        <button type="button" className="reader__close" onClick={onClose} aria-label="Close">
-          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-            <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        </button>
+        <div className="reader__actions">
+          {canEdit && !isEditing && (
+            <button type="button" className="reader__edit-btn" onClick={() => setIsEditing(true)}>Edit</button>
+          )}
+          {isEditing && (
+            <>
+              <button type="button" className="reader__save-btn" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </button>
+              <button type="button" className="reader__cancel-btn" onClick={handleCancel}>Cancel</button>
+            </>
+          )}
+          <button type="button" className="reader__close" onClick={onClose} aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
       <div className="reader__body">
         {type === "voice" ? (
           <VoiceReader profile={data} />
+        ) : isEditing ? (
+          <textarea
+            className="reader__editor"
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            spellCheck={false}
+          />
         ) : (
           <div className="prose" dangerouslySetInnerHTML={{ __html: window.mdToHtml(data.body) }} />
         )}

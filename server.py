@@ -477,6 +477,97 @@ async def delete_project(project_id: str):
     return {"status": "deleted", "id": project_id}
 
 
+class ArtifactSave(BaseModel):
+    content: str
+
+
+@app.put("/api/artifacts/{artifact_id}")
+async def save_artifact(artifact_id: str, body: ArtifactSave):
+    """Overwrite an artifact file on disk and return updated artifact data."""
+    from fastapi import HTTPException
+
+    today = DateClass.today()
+    today_str = today.strftime("%d %b %Y")
+    today_iso = today.isoformat()
+
+    projects = _read_projects_index()
+
+    # Parse artifact_id to determine kind and project
+    if artifact_id.startswith("idea-"):
+        project_id = artifact_id[len("idea-"):]
+        kind = "ideas"
+    elif artifact_id.startswith("outline-"):
+        project_id = artifact_id[len("outline-"):]
+        kind = "outlines"
+    elif artifact_id.startswith("draft-"):
+        # format: draft-{project_id}-ch{NN}
+        rest = artifact_id[len("draft-"):]
+        ch_idx = rest.rfind("-ch")
+        if ch_idx == -1:
+            raise HTTPException(status_code=400, detail="Invalid draft artifact id")
+        project_id = rest[:ch_idx]
+        ch_str = rest[ch_idx + 3:]
+        try:
+            ch_num = int(ch_str)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid chapter number in artifact id")
+        kind = "drafts"
+    else:
+        raise HTTPException(status_code=400, detail="Unknown artifact id format")
+
+    entry = next((p for p in projects if p["id"] == project_id), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project_dir = PROJECTS_DIR / entry.get("dir", entry["name"])
+
+    if kind == "ideas":
+        file_path = project_dir / "ideas.md"
+        file_path.write_text(body.content, encoding="utf-8")
+        result = {
+            "id": artifact_id,
+            "project": project_id,
+            "title": _extract_title(body.content, entry.get("name", project_id)),
+            "updated": today_str,
+            "body": body.content,
+        }
+    elif kind == "outlines":
+        file_path = project_dir / "outline.md"
+        file_path.write_text(body.content, encoding="utf-8")
+        ch_count = sum(1 for l in body.content.splitlines() if l.strip().startswith("###"))
+        result = {
+            "id": artifact_id,
+            "project": project_id,
+            "title": _extract_title(body.content, f"{entry.get('name', project_id)} — Outline"),
+            "updated": today_str,
+            "chapters": ch_count or body.content.count("\n##"),
+            "body": body.content,
+        }
+    else:  # drafts
+        chapters_dir = project_dir / "chapters"
+        chapters_dir.mkdir(exist_ok=True)
+        file_path = chapters_dir / f"chapter-{ch_num:02d}.md"
+        file_path.write_text(body.content, encoding="utf-8")
+        word_count = len(body.content.split())
+        result = {
+            "id": artifact_id,
+            "project": project_id,
+            "title": _extract_title(body.content, f"Chapter {ch_num}"),
+            "updated": today_str,
+            "words": word_count,
+            "status": "draft",
+            "body": body.content,
+        }
+
+    # Recompute and persist project stats
+    stats = _compute_project_stats(entry.get("dir", entry["name"]))
+    updated_entry = {**entry, **stats, "updated": today_iso}
+    _upsert_project(updated_entry)
+
+    logger.info(f"Saved artifact {artifact_id} → {file_path}")
+    return result
+
+
 @app.post("/api/sync")
 async def sync_projects():
     """Scan the projects directory for manually added folders, register any new ones, and return all artifacts."""

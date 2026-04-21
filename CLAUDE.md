@@ -98,6 +98,11 @@ Projects are stored in `projects/` as subdirectories. Each project is a folder c
 - `POST /api/chat` — send a message to the coordinator agent (body: `{ message, session_id, project_id, book_name }`)
 - `GET /api/state/{session_id}` — fetch session state and message history
 
+**Artifact editing:**
+- `PUT /api/artifacts/{artifact_id}` — save edited artifact content to disk (body: `{ content }`)
+  - Artifact IDs: `idea-{project_id}`, `outline-{project_id}`, `draft-{project_id}-ch{NN}`
+  - Returns updated artifact data with new `updated` timestamp and recomputed stats
+
 **Voice profiles:**
 - `POST /api/voice/upload` — upload a writing sample for voice analysis (multipart form: `file`, `profile_name`)
 
@@ -111,6 +116,14 @@ Projects are stored in `projects/` as subdirectories. Each project is a folder c
 - Session state management — listens to SSE `state` events and updates React state in real time
 
 Live agent chat is fully wired: `/api/chat` endpoint sends SSE events; frontend parses message, status, and state events and renders them live.
+
+**ReaderPanel inline editing.** When a user clicks an idea, outline, or draft in the left rail, a `ReaderPanel` overlay opens showing the artifact content. Users can:
+- Click **Edit** to enable a textarea for live editing
+- Click **Save** to persist changes to disk via `PUT /api/artifacts/{artifact_id}` and update stats
+- Click **Cancel** to discard changes and return to read mode
+- Click the close (×) button to close the panel at any time
+
+The panel updates the artifact state locally and in the left rail artifact list on successful save.
 
 **Script loading order matters.** The JSX files use `window.*` globals from earlier scripts. The load order in `index.html` is intentional:
 1. `artifacts.js` → `agents.js` (define globals)
@@ -145,6 +158,8 @@ ADK substitutes the actual value from session state when the agent runs, ensurin
 - Live chat via `/api/chat` endpoint with SSE streaming
 - Session state persistence to SQLite database via ADK Event/EventActions
 - Agent project context via ADK template substitution (`{book_name}`)
+- Inline artifact editing: click Edit on ideas/outlines/drafts, modify, Save (persists to disk), or Cancel
+- Coordinator can read existing project files: responds to "review the current state" by calling `load_ideas()`, `load_outline()`, `list_project_files()`
 
 **Partially wired/WIP:**
 - Voice profile uploads (endpoint exists, integration untested)

@@ -333,7 +333,15 @@ function App() {
         </header>
 
         {activeArtifact ? (
-          <window.ReaderPanel item={activeArtifact} onClose={() => setActiveArtifact(null)} />
+          <window.ReaderPanel
+            item={activeArtifact}
+            onClose={() => setActiveArtifact(null)}
+            onSave={(updatedData) => {
+              setActiveArtifact({ type: activeArtifact.type, data: updatedData });
+              const kind = { idea: "ideas", outline: "outlines", draft: "drafts" }[activeArtifact.type];
+              if (kind) addArtifact(kind, updatedData);
+            }}
+          />
         ) : null}
 
         <div className="thread" ref={listRef}>
