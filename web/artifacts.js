@@ -192,6 +192,154 @@ In 1848, R.S. Edleston, an English naturalist, stumbled upon a fascinating disco
     },
   ],
 
+  research: [
+    {
+      id: "research-vv-meditation",
+      project: "vertical-void",
+      title: "Mindfulness in Extreme Environments",
+      date: "12 Apr 2026",
+      sources: 14,
+      summary: "Survey of literature on flow states, risk-induced presence, and meditative absorption in high-stakes physical activity. Connects Csikszentmihalyi's flow model to the attentional demands of alpine climbing.",
+      body: `## Overview
+
+Fourteen peer-reviewed studies and two book-length treatments were reviewed for this report. The central finding: extreme physical risk functions as a forced attentional anchor, producing states phenomenologically similar to advanced meditative absorption.
+
+## Key Sources
+
+**Csikszentmihalyi, M. (1990). Flow: The Psychology of Optimal Experience.**
+Flow requires a precise match between challenge and skill. Alpine routes at the edge of a climber's ability create sustained flow windows unavailable in safer pursuits.
+
+**Rheinberg, F. & Engeser, S. (2018). Intrinsic Motivation and Flow.**
+Distinguishes flow from mere concentration. The self-referential internal monologue — the primary obstacle in meditation — is suppressed under acute risk.
+
+**De Manzano, Ö. et al. (2010). The psychophysiology of flow during piano playing.**
+Autonomic markers of flow (reduced heart rate variability, narrowed sympathetic activation) mirror those documented in expert meditators during samadhi states.
+
+## Synthesis
+
+The "forced presence" argument is well-supported. The risk vector uniquely suppresses default mode network activity — a finding consistent across fMRI studies of both advanced meditators and elite athletes during competition. The solo condition amplifies this: without partners to offload attention, the climber's awareness cannot distribute. It must collapse inward and forward simultaneously.
+
+## Gaps
+
+No studies directly compare solo vs. roped climbing on presence metrics. This is a clear empirical gap the book could name explicitly.`,
+    },
+    {
+      id: "research-wfa-mismatch",
+      project: "weakest-form",
+      title: "Cognitive Mismatch Hypothesis",
+      date: "28 Mar 2026",
+      sources: 22,
+      summary: "Literature review on evolutionary psychology, environmental mismatch, and behavioral adaptation timescales. Grounds the 'alien environment' frame in empirical cognitive science.",
+      body: `## Overview
+
+This report consolidates 22 sources across evolutionary psychology, cognitive science, and anthropology to support the book's core argument: human cognition evolved for an environment that no longer exists, and the resulting mismatch underlies most modern pathology — including our relationship to art.
+
+## Key Sources
+
+**Li, N.P. et al. (2018). Mismatch and the modern world.**
+Comprehensive review of evolutionary mismatch across domains: diet, social structure, sleep, reproduction, and cognition. Establishes the conceptual vocabulary the book can borrow directly.
+
+**Richerson, P. & Boyd, R. (2005). Not by genes alone.**
+Cultural evolution operates on timescales orders of magnitude faster than genetic evolution. The gap between "hardware" and "software" is the mismatch the book describes.
+
+**Haidt, J. (2012). The Righteous Mind.**
+Moral intuitions are evolutionary residue operating in environments they were not designed for. Relevant to the chapter on propaganda.
+
+## The Peppered Moth Literature
+
+The classic Biston betularia studies (Kettlewell 1955; Majerus 2009 replication) remain the clearest example of environment-driven phenotypic selection within a human lifetime. Majerus's 2009 replication fully restores the scientific standing of the story.
+
+## Synthesis
+
+The mismatch frame is robust and well-evidenced. The book's contribution is applying it to aesthetic production and reception — territory the academic literature has not mapped with any specificity.
+
+## Gaps
+
+Limited empirical literature on art specifically as a mismatch signal. The argument will need to be built analogically from the stronger evidence in other domains.`,
+    },
+  ],
+
+  debates: [
+    {
+      id: "debate-vv-01",
+      project: "vertical-void",
+      title: "Is solo mountaineering genuinely meditative, or merely dangerous?",
+      date: "14 Apr 2026",
+      thesis: "Solo mountaineering constitutes a legitimate meditative practice — not metaphorically, but structurally.",
+      outcome: "Thesis held — risk-as-anchor argument strengthened",
+      summary: "Stress-tested the core claim against counterarguments about ego inflation, death anxiety, survivorship bias, and the objection that danger is antithetical to equanimity.",
+      body: `## Thesis
+Solo mountaineering constitutes a legitimate meditative practice — not metaphorically, but structurally.
+
+## Round 1 — The Ego Objection
+
+**Against:** Meditation aims to dissolve ego. Summit culture inflates it. The lone summit is a performance of self, not an erasure of it.
+
+**Defense:** This conflates the goal of meditation with its mechanism. The mechanism is attentional collapse — the suppression of the default mode network's self-referential chatter. This suppression occurs under acute risk regardless of what the climber intends. The ego inflation comes after, in the telling. On the wall, the self is quieted by necessity.
+
+**Verdict:** Objection fails. Post-hoc ego inflation doesn't retroactively alter the phenomenological state on the wall.
+
+## Round 2 — The Death Anxiety Objection
+
+**Against:** Fear of death is the opposite of meditative equanimity. A climber gripped with fear is not meditating; they are panicking.
+
+**Defense:** The experienced alpine soloist is not gripped with fear — they are working. The anxiety is transformed by competence into attention. Beginners on dangerous terrain are afraid. Experts are present. The practice develops the capacity to convert threat into focus.
+
+**Verdict:** Objection fails for skilled practitioners, holds for novices. Book should name this explicitly: this is an advanced practice, not a beginner's path.
+
+## Round 3 — Survivorship Bias
+
+**Against:** The argument is only made by those who survived. The dead can't confirm that their final moments were meditative. This is selection bias masquerading as evidence.
+
+**Defense:** Acknowledged. The book doesn't claim solo climbing is safe or universally accessible. It claims that for practitioners who have developed the requisite skill, the practice reliably produces meditative states. Survivorship bias is a valid epistemological caveat, not a refutation of the phenomenological claim.
+
+**Verdict:** Partial concession. The book should own this caveat explicitly rather than dodge it.
+
+## Summary
+
+Thesis held. The death anxiety objection sharpened the argument: the key variable is competence-mediated transformation of threat into presence. The survivorship bias point should be integrated into the text as intellectual honesty rather than elided.`,
+    },
+    {
+      id: "debate-wfa-01",
+      project: "weakest-form",
+      title: "Is art the weakest or the strongest response to civilizational mismatch?",
+      date: "05 Apr 2026",
+      thesis: "Art is the weakest, most honest record of human drift from evolutionary niche.",
+      outcome: "Partial — 'weakest' reframed as diagnostic, not pejorative",
+      summary: "Challenged whether 'weakest' carries the right connotation when art may be the only medium honest enough to register what other systems suppress.",
+      body: `## Thesis
+Art is the weakest, most honest record of human drift from evolutionary niche.
+
+## Round 1 — Weakest is the Wrong Word
+
+**Against:** 'Weakest' implies inadequacy. But if art is the most honest signal of mismatch, it's also the most valuable. The book inadvertently diminishes what it's trying to defend.
+
+**Defense:** 'Weakest' is intentionally provocative. The claim is that art has the least institutional power — least ability to change material conditions, organize labor, redirect capital. Compared to policy, medicine, religion, or economics, art is weak in the sense that it cannot compel. It can only witness.
+
+**Verdict:** Clarification needed. The book must define 'weakest' precisely on first use or risk the word doing unintended damage to the argument.
+
+## Round 2 — Art as Propaganda Refutes the Thesis
+
+**Against:** Chapter 4 is about art as propaganda — art weaponized to suppress rather than reveal mismatch. If art can be the bottleneck through which distorted reality flows, it is not honest. The thesis is self-contradicting.
+
+**Defense:** The book distinguishes art that serves power from art that serves perception. Propaganda is art captured by institutional interests. The claim is about art in its uncaptured state — which is precisely why it's weak. It has no institutional protection. The moment it gets institutionalized, it becomes propaganda.
+
+**Verdict:** Objection valid. The book needs a cleaner working definition of 'art' that explicitly excludes or contextualizes state-captured aesthetic production.
+
+## Round 3 — Is Honesty a Virtue in a Mismatch World?
+
+**Against:** If the human cognitive system is mismatched to its environment, human art — produced by the same mismatched cognition — is also distorted. It doesn't record the mismatch honestly; it reproduces the distortion.
+
+**Defense:** This is the book's deepest tension and should be surfaced, not resolved. Art doesn't transcend the mismatch; it is produced within it. Its honesty is not objective accuracy but comparative — it is more honest than propaganda, more honest than advertising, more honest than political language, because it has less to protect.
+
+**Verdict:** This objection is the most productive. It should become a section of the book, not a problem to be solved.
+
+## Summary
+
+'Weakest' needs definitional work. The propaganda chapter creates genuine tension with the honesty claim that the book can resolve by distinguishing captured from uncaptured art. The deepest objection — that mismatch-produced art can't accurately represent mismatch — is generative and should be owned.`,
+    },
+  ],
+
   world: [
     {
       id: "world-vv-characters",

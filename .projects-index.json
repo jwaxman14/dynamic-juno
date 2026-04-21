@@ -1,0 +1,41 @@
+[
+  {
+    "id": "the-untold",
+    "name": "The Untold",
+    "dir": "The Untold",
+    "status": "ideation",
+    "created": ".",
+    "wordCount": 0,
+    "chapters": 0,
+    "updated": "2026-04-20",
+    "type": "nonfiction",
+    "genre": "",
+    "description": ""
+  },
+  {
+    "id": "the-vertical-void",
+    "name": "The Vertical Void",
+    "dir": "The Vertical Void",
+    "status": "ideation",
+    "created": ".",
+    "wordCount": 0,
+    "chapters": 0,
+    "updated": "2026-04-20",
+    "type": "nonfiction",
+    "genre": "",
+    "description": ""
+  },
+  {
+    "id": "the-weakest-form-of-art",
+    "name": "The Weakest Form of Art",
+    "dir": "The Weakest Form of Art",
+    "status": "ideation",
+    "created": ".",
+    "wordCount": 8305,
+    "chapters": 4,
+    "updated": "2026-04-20",
+    "type": "nonfiction",
+    "genre": "",
+    "description": ""
+  }
+]

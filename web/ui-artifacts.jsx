@@ -141,9 +141,93 @@ function Glyph({ kind }) {
           <path d="M2.8 7h8.4M7 2.8c1.6 1.3 1.6 7 0 8.4M7 2.8c-1.6 1.3-1.6 7 0 8.4" stroke="currentColor" strokeWidth="1.2" />
         </svg>
       );
+    case "research":
+      return (
+        <svg {...common} aria-hidden="true">
+          <circle cx="6" cy="6" r="3.2" stroke="currentColor" strokeWidth="1.2" />
+          <path d="M8.5 8.5l3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+      );
+    case "debate":
+      return (
+        <svg {...common} aria-hidden="true">
+          <path d="M2.5 4h5.5M2.5 7h4M8 10h3.5M11.5 10h-3.5M11.5 7h-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M7 5.5v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      );
     default:
       return null;
   }
+}
+
+function ArtifactListModal({ title, kind, items, onClose }) {
+  const [selected, setSelected] = useStateL(null);
+
+  const renderMeta = (item) => {
+    if (kind === "research") return [`${item.sources} sources`, item.date];
+    if (kind === "debate") return [item.outcome, item.date];
+    return [item.date];
+  };
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal modal--artifact" role="dialog" aria-modal="true">
+        <div className="modal__nav">
+          {selected ? (
+            <button type="button" className="modal__back-btn" onClick={() => setSelected(null)}>
+              ← Back
+            </button>
+          ) : null}
+          <span className="modal__nav-title">{selected ? selected.title : title}</span>
+          <button type="button" className="modal__close-btn" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <div className="modal__scroll">
+          {selected ? (
+            <div className="modal__detail">
+              <div className="modal__detail-meta">
+                {renderMeta(selected).map((tag) => (
+                  <span key={tag} className="modal__detail-tag">{tag}</span>
+                ))}
+                {kind === "debate" && selected.thesis ? (
+                  <span className="modal__detail-tag modal__detail-tag--thesis">"{selected.thesis}"</span>
+                ) : null}
+              </div>
+              <div className="prose" dangerouslySetInnerHTML={{ __html: window.mdToHtml(selected.body) }} />
+            </div>
+          ) : (
+            <div className="modal__list">
+              {items.length === 0 ? (
+                <div className="modal__empty">No {title.toLowerCase()} yet for this project.</div>
+              ) : items.map((item) => (
+                <button key={item.id} type="button" className="artifact-card" onClick={() => setSelected(item)}>
+                  <div className="artifact-card__title">{item.title}</div>
+                  <div className="artifact-card__summary">{item.summary}</div>
+                  <div className="artifact-card__meta">
+                    {renderMeta(item).map((tag) => (
+                      <span key={tag}>{tag}</span>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModalArtifactGroup({ title, count, onClick }) {
+  return (
+    <div className="group">
+      <button type="button" className="group__head group__head--modal" onClick={onClick}>
+        <span className="group__modal-arrow" aria-hidden="true">↗</span>
+        <span className="group__title">{title}</span>
+        <span className="group__count">{count}</span>
+      </button>
+    </div>
+  );
 }
 
 function ArtifactLeaf({ node, active, onOpen }) {
@@ -178,9 +262,10 @@ function ArtifactGroup({ title, count, children, defaultOpen = true }) {
   );
 }
 
-function ArtifactBrowser({ projects, activeProjectId, setActiveProjectId, openArtifact, activeArtifactId, onNewProject }) {
+function ArtifactBrowser({ projects, artifacts, activeProjectId, setActiveProjectId, openArtifact, activeArtifactId, onNewProject, onDeleteProject, onSync, syncing, syncResult }) {
   const [showNewModal, setShowNewModal] = useStateL(false);
-  const A = window.ARTIFACTS;
+  const [artifactModal, setArtifactModal] = useStateL(null); // { kind, title, items }
+  const A = artifacts || window.ARTIFACTS;
 
   // Build filtered leaves per group, limited to the active project for
   // project-scoped artifacts; voice profiles are global.
@@ -199,6 +284,8 @@ function ArtifactBrowser({ projects, activeProjectId, setActiveProjectId, openAr
   const worldLeaves = A.world
     .filter((w) => w.project === activeProjectId)
     .map((w) => ({ kind: "world", id: w.id, label: w.title, meta: w.type, payload: { type: "world", data: w } }));
+  const researchItems = (A.research || []).filter((r) => r.project === activeProjectId);
+  const debateItems = (A.debates || []).filter((d) => d.project === activeProjectId);
 
   return (
     <aside className="rail rail--left">
@@ -220,18 +307,28 @@ function ArtifactBrowser({ projects, activeProjectId, setActiveProjectId, openAr
         <div className="project-switcher__label">Current project</div>
         <div className="project-switcher__list">
           {projects.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`project-row ${p.id === activeProjectId ? "project-row--active" : ""}`}
-              onClick={() => setActiveProjectId(p.id)}
-            >
-              <span className="project-row__name">{p.name}</span>
-              <span className={`project-row__status status--${p.status}`}>{p.status}</span>
-              <span className="project-row__meta">
-                {p.chapters} ch · {p.wordCount.toLocaleString()} w · {p.updated}
-              </span>
-            </button>
+            <div key={p.id} className="project-row-wrap">
+              <button
+                type="button"
+                className={`project-row ${p.id === activeProjectId ? "project-row--active" : ""}`}
+                onClick={() => setActiveProjectId(p.id)}
+              >
+                <span className="project-row__name">{p.name}</span>
+                <span className={`project-row__status status--${p.status}`}>{p.status}</span>
+                <span className="project-row__meta">
+                  {p.chapters ?? 0} ch · {(p.wordCount ?? 0).toLocaleString()} w · {p.updated}
+                </span>
+              </button>
+              {onDeleteProject && (
+                <button
+                  type="button"
+                  className="project-row__delete"
+                  onClick={() => onDeleteProject(p.id)}
+                  aria-label={`Delete ${p.name}`}
+                  title="Delete project"
+                >✕</button>
+              )}
+            </div>
           ))}
         </div>
       </div>
@@ -264,11 +361,40 @@ function ArtifactBrowser({ projects, activeProjectId, setActiveProjectId, openAr
             <ArtifactLeaf key={n.id} node={n} active={n.id === activeArtifactId} onOpen={openArtifact} />
           ))}
         </ArtifactGroup>
+        <ModalArtifactGroup
+          title="Research Reports"
+          count={researchItems.length}
+          onClick={() => setArtifactModal({ kind: "research", title: "Research Reports", items: researchItems })}
+        />
+        <ModalArtifactGroup
+          title="Debates"
+          count={debateItems.length}
+          onClick={() => setArtifactModal({ kind: "debate", title: "Debates", items: debateItems })}
+        />
       </div>
 
       <div className="rail__footer rail__footer--left">
-        <button type="button" className="ghost-btn" onClick={() => setShowNewModal(true)}>+ New project</button>
-        <button type="button" className="ghost-btn">Import samples</button>
+        <div className="rail__footer-sync">
+          <button
+            type="button"
+            className={`sync-btn${syncing ? " sync-btn--busy" : ""}`}
+            onClick={onSync}
+            disabled={syncing}
+            title="Scan the projects folder for newly added directories"
+          >
+            {syncing ? <span className="spinner" /> : "↻"}
+            {syncing ? " Scanning…" : " Sync Files"}
+          </button>
+          {syncResult != null && (
+            <div className="sync-result">
+              {syncResult === 0 ? "Up to date" : `+${syncResult} project${syncResult === 1 ? "" : "s"} found`}
+            </div>
+          )}
+        </div>
+        <div className="rail__footer-actions">
+          <button type="button" className="ghost-btn" onClick={() => setShowNewModal(true)}>+ New project</button>
+          <button type="button" className="ghost-btn">Import samples</button>
+        </div>
       </div>
 
       {showNewModal && (
@@ -278,6 +404,15 @@ function ArtifactBrowser({ projects, activeProjectId, setActiveProjectId, openAr
             setShowNewModal(false);
             onNewProject && onNewProject(data);
           }}
+        />
+      )}
+
+      {artifactModal && (
+        <ArtifactListModal
+          kind={artifactModal.kind}
+          title={artifactModal.title}
+          items={artifactModal.items}
+          onClose={() => setArtifactModal(null)}
         />
       )}
     </aside>

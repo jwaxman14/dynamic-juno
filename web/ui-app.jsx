@@ -5,11 +5,36 @@
 
 const { useState: useStateA, useEffect: useEffectA, useRef: useRefA, useMemo: useMemoA } = React;
 
+// Maps ADK agent names → frontend agent IDs
+const AUTHOR_TO_ID = {
+  coordinator: "coordinator",
+  idea_agent: "idea",
+  research_agent: "research",
+  outline_agent: "outline",
+  voice_agent: "voice",
+  writer_agent: "writer",
+  editor_agent: "editor",
+  debater_agent: "debater",
+  world_builder_agent: "world",
+};
+const authorToId = (author) => AUTHOR_TO_ID[author] || author;
+
 function useAgentStates() {
   const initial = {};
   for (const a of window.AGENTS) initial[a.id] = { status: "idle", work: null };
   const [states, setStates] = useStateA(initial);
   const timers = useRefA([]);
+
+  const setAgentStatus = (agentId, status, work = null) =>
+    setStates((s) => ({ ...s, [agentId]: { status, work } }));
+
+  const setAllIdle = () => {
+    setStates(() => {
+      const next = {};
+      for (const a of window.AGENTS) next[a.id] = { status: "idle", work: null };
+      return next;
+    });
+  };
 
   const clear = () => {
     timers.current.forEach((t) => clearTimeout(t));
@@ -64,21 +89,99 @@ function useAgentStates() {
   };
 
   useEffectA(() => () => clear(), []);
-  return { states, runScenario };
+  return { states, runScenario, setAgentStatus, setAllIdle };
 }
 
 function App() {
-  const [activeProjectId, setActiveProjectId] = useStateA("vertical-void");
+  const [activeProjectId, setActiveProjectIdRaw] = useStateA("vertical-void");
   const [projects, setProjects] = useStateA(window.ARTIFACTS.projects);
-  const activeProject = projects.find((p) => p.id === activeProjectId);
+  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
+
+  const setActiveProjectId = (id) => {
+    if (projects.find((p) => p.id === id)) setActiveProjectIdRaw(id);
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch("/api/projects");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.length === 0) return;
+      setProjects(data);
+      setActiveProjectIdRaw((curr) => (data.find((p) => p.id === curr) ? curr : data[0].id));
+    } catch (_) {}
+  };
+
+  useEffectA(() => {
+    fetchProjects();
+    const onFocus = () => fetchProjects();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm(`Delete this project? All files will be permanently removed.`)) return;
+    try {
+      await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+    } catch (_) {}
+    setProjects((prev) => {
+      const next = prev.filter((p) => p.id !== projectId);
+      if (activeProjectId === projectId && next.length > 0) {
+        setActiveProjectIdRaw(next[0].id);
+        setActiveArtifact(null);
+      }
+      return next;
+    });
+  };
+
+  const [artifacts, setArtifacts] = useStateA(() => ({ ...window.ARTIFACTS }));
+
+  const addArtifact = (kind, data) => {
+    setArtifacts((prev) => ({
+      ...prev,
+      [kind]: [...(prev[kind] || []).filter((x) => x.id !== data.id), data],
+    }));
+  };
 
   const [activeArtifact, setActiveArtifact] = useStateA(null); // { type, data }
   const openArtifact = (leaf) => setActiveArtifact(leaf.payload);
   const activeArtifactId = activeArtifact ? activeArtifact.data.id : null;
 
-  const { states, runScenario } = useAgentStates();
+  const [syncing, setSyncing] = useStateA(false);
+  const [syncResult, setSyncResult] = useStateA(null);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/sync", { method: "POST" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.projects) {
+        setProjects(data.projects);
+        if (data.projects.length > 0) {
+          setActiveProjectIdRaw((curr) =>
+            data.projects.find((p) => p.id === curr) ? curr : data.projects[0].id
+          );
+        }
+      }
+      if (data.artifacts) {
+        Object.entries(data.artifacts).forEach(([kind, items]) => {
+          items.forEach((item) => addArtifact(kind, item));
+        });
+      }
+      setSyncResult(data.synced ?? 0);
+    } catch (_) {
+      setSyncResult(0);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const { states, runScenario, setAgentStatus, setAllIdle } = useAgentStates();
   const [busy, setBusy] = useStateA(false);
   const [typingAgent, setTypingAgent] = useStateA(null);
+  const sessionIdRef = useRefA(`session-${Date.now()}`);
 
   const [messages, setMessages] = useStateA(() => ([
     {
@@ -95,35 +198,35 @@ function App() {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, typingAgent, activeArtifact]);
 
-  const handleNewProject = ({ title, type, genre, description }) => {
-    const id = `proj-${Date.now()}`;
-    const newProject = {
-      id,
-      name: title,
-      status: "ideation",
-      created: new Date().toISOString().slice(0, 10),
-      wordCount: 0,
-      chapters: 0,
-      updated: "just now",
-    };
+  const handleNewProject = async ({ title, type, genre, description }) => {
+    let newProject;
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, type, genre, description }),
+      });
+      newProject = await res.json();
+    } catch (_) {
+      const id = `proj-${Date.now()}`;
+      newProject = { id, name: title, status: "ideation", created: new Date().toISOString().slice(0, 10), wordCount: 0, chapters: 0, updated: "just now" };
+    }
     setProjects((prev) => [...prev, newProject]);
-    setActiveProjectId(id);
+    setActiveProjectIdRaw(newProject.id);
     setActiveArtifact(null);
 
     const parts = [`I'm starting a new ${type} book project: **${title}**.`];
     if (genre) parts.push(`Genre: ${genre}.`);
     if (description) parts.push(description);
-    const initMessage = parts.join(" ");
-
-    setTimeout(() => send(initMessage), 100);
+    setTimeout(() => send(parts.join(" ")), 100);
   };
 
   const handleProjectSwitch = (project) => {
     setBusy(true);
 
-    const ideas = window.ARTIFACTS.ideas.filter((a) => a.project === project.id);
-    const outlines = window.ARTIFACTS.outlines.filter((a) => a.project === project.id);
-    const drafts = window.ARTIFACTS.drafts.filter((a) => a.project === project.id);
+    const ideas = (artifacts.ideas || []).filter((a) => a.project === project.id);
+    const outlines = (artifacts.outlines || []).filter((a) => a.project === project.id);
+    const drafts = (artifacts.drafts || []).filter((a) => a.project === project.id);
 
     setMessages((m) => [
       ...m,
@@ -232,78 +335,111 @@ function App() {
     if (!busy) handleProjectSwitch(project);
   };
 
-  const send = (text) => {
-    const scenario = window.pickScenario(text);
+  const send = async (text) => {
     const userMsg = { id: `u-${Date.now()}`, role: "user", time: window.now(), text };
     setMessages((m) => [...m, userMsg]);
     setBusy(true);
+    setAgentStatus("coordinator", "working", "Classifying intent");
 
-    // Coordinator acknowledges routing.
-    if (scenario.route) {
-      setTimeout(() => {
-        setMessages((m) => [...m, {
-          id: `c-${Date.now()}`,
-          role: "assistant",
-          agentId: "coordinator",
-          time: window.now(),
-          text: scenario.route,
-          handoff: scenario.target !== "coordinator" ? scenario.target : null,
-        }]);
-      }, 700);
-    }
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          session_id: sessionIdRef.current,
+          project_id: activeProjectId,
+          book_name: activeProject?.name ?? "",
+        }),
+      });
 
-    // Run the agent state machine, and show a typing bubble for the target.
-    runScenario(scenario);
-    setTimeout(() => setTypingAgent(scenario.target), 1600);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let activeAgent = "coordinator";
 
-    // Compute total scripted duration.
-    const total = scenario.steps.reduce((sum, s) => sum + s.ms, 900);
-    setTimeout(() => {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // hold incomplete line
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          let evt;
+          try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+
+          if (evt.type === "status" && evt.author) {
+            const agentId = authorToId(evt.author);
+            if (agentId !== activeAgent) {
+              setAgentStatus(activeAgent, "idle", null);
+              activeAgent = agentId;
+              setAgentStatus(agentId, "working", "Working…");
+              setTypingAgent(agentId);
+            }
+          } else if (evt.type === "project_update") {
+            setProjects((prev) => prev.map((p) =>
+              p.id === evt.id ? { ...p, wordCount: evt.wordCount, chapters: evt.chapters, updated: evt.updated } : p
+            ));
+          } else if (evt.type === "artifact") {
+            addArtifact(evt.kind, evt.data);
+            const readerKind = { drafts: "draft", outlines: "outline", ideas: "idea", world: "world" }[evt.kind];
+            if (readerKind) setActiveArtifact({ type: readerKind, data: evt.data });
+          } else if (evt.type === "message") {
+            const agentId = authorToId(evt.author || "coordinator");
+            setTypingAgent(null);
+            setAllIdle();
+            setMessages((m) => [...m, {
+              id: `a-${Date.now()}`,
+              role: "assistant",
+              agentId,
+              time: window.now(),
+              text: evt.text,
+            }]);
+            setBusy(false);
+          } else if (evt.type === "error") {
+            setTypingAgent(null);
+            setAllIdle();
+            setMessages((m) => [...m, {
+              id: `e-${Date.now()}`,
+              role: "assistant",
+              agentId: "coordinator",
+              time: window.now(),
+              text: `Something went wrong: ${evt.text}`,
+            }]);
+            setBusy(false);
+          }
+        }
+      }
+    } catch (err) {
       setTypingAgent(null);
-
-      // Build a project-aware reply using the active project's real artifacts.
-      const projectArtifacts = {
-        ideas:         window.ARTIFACTS.ideas.filter((a) => a.project === activeProjectId),
-        outlines:      window.ARTIFACTS.outlines.filter((a) => a.project === activeProjectId),
-        drafts:        window.ARTIFACTS.drafts.filter((a) => a.project === activeProjectId),
-        voiceProfiles: window.ARTIFACTS.voiceProfiles,
-      };
-      const replyText = window.buildProjectReply(scenario.target, activeProject, projectArtifacts);
-
+      setAllIdle();
       setMessages((m) => [...m, {
-        id: `a-${Date.now()}`,
+        id: `e-${Date.now()}`,
         role: "assistant",
-        agentId: scenario.target,
+        agentId: "coordinator",
         time: window.now(),
-        text: replyText,
+        text: `Connection error: ${err.message}`,
       }]);
       setBusy(false);
-
-      // If the reply created / updated an artifact, open it in the reader.
-      const maybe = {
-        research: null, // research reader not yet built; left rail stays the main surface
-        outline: projectArtifacts.outlines[0] ?? null,
-        voice: projectArtifacts.voiceProfiles[0] ?? null,
-        writer: projectArtifacts.drafts[0] ?? null,
-        editor: projectArtifacts.drafts[0] ?? null,
-        idea: projectArtifacts.ideas[0] ?? null,
-      }[scenario.target];
-      if (maybe) {
-        const typeMap = { outline: "outline", voice: "voice", writer: "draft", editor: "draft", idea: "idea" };
-        setActiveArtifact({ type: typeMap[scenario.target], data: maybe });
-      }
-    }, total + 700);
+    }
   };
 
   return (
     <div className="shell">
       <window.ArtifactBrowser
         projects={projects}
+        artifacts={artifacts}
         activeProjectId={activeProjectId}
         setActiveProjectId={handleSelectProject}
         openArtifact={openArtifact}
         activeArtifactId={activeArtifactId}
         onNewProject={handleNewProject}
+        onDeleteProject={handleDeleteProject}
+        onSync={handleSync}
+        syncing={syncing}
+        syncResult={syncResult}
       />
 
       <main className="stage">
